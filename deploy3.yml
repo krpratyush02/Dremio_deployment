@@ -1,0 +1,82 @@
+name: $(Year:yyyy).$(Month).$(Date:dd)$(Rev:.r)
+
+trigger: none
+
+pr: none
+
+parameters:
+- name: environment
+  type: string
+  values:
+  - DEV
+  - UAT
+  - PROD
+- name: legacySpace
+  type: string
+  default: 'aziest1dev670'
+- name: legacySpaceNoram
+  type: string
+  default: ''
+- name: legacySpaceApac
+  type: string
+  default: ''
+
+
+variables:
+  - name: projectWorkingDirectory
+    value: $(System.DefaultWorkingDirectory)/projects/glb_glb_glb_dremio_migrated_views
+  - name: legacySpace
+    value: ${{ parameters.legacySpace }}
+  - name: legacySpaceNoram
+    value: ${{ parameters.legacySpaceNoram }}
+  - name: legacySpaceApac
+    value: ${{ parameters.legacySpaceApac }}
+    
+resources:
+  repositories:
+  - repository: DevOps
+    type: git
+    name: IST.GLB.GLB.GDS_DATAPLATFORM/IST.GLB.GLB.GDS_DATAPLATFORM.DEVOPS
+
+stages:
+  - stage: Deploy_refinery
+    displayName: GLB Dremio Migrated Views - ${{ parameters.environment }} Refinery
+    pool:
+     name: D-A Platform - Semantic Pool DEV
+    variables:
+      - group: GDS_DATAPLATFORM.Dremio.Secrets.SDX_${{ parameters.environment }}
+      - name: dremioSpace
+        value: refinery
+    jobs:
+      - template: /pipelines/jobs/run-dbt-deployment.yml@DevOps
+        parameters:
+          azureDevopsEnvironment: ${{ parameters.environment }}_SEMANTIC
+          dremioSpace: $(dremioSpace)
+
+  - stage: Deploy_preview
+    displayName: GLB Dremio Migrated Views - ${{ parameters.environment }} Preview
+    pool:
+     name: D-A Platform - Semantic Pool UAT
+    variables:
+      - group: GDS_DATAPLATFORM.Dremio.Secrets.SDX_${{ parameters.environment }}
+      - name: dremioSpace
+        value: preview
+    jobs:
+      - template: /pipelines/jobs/run-dbt-deployment.yml@DevOps
+        parameters:
+          azureDevopsEnvironment: ${{ parameters.environment }}_SEMANTIC
+          dremioSpace: $(dremioSpace)
+
+  - stage: Deploy_live
+    displayName: GLB Dremio Migrated Views - ${{ parameters.environment }} Live
+    pool:
+     name: D-A Platform - Semantic Pool PROD
+    variables:
+      - group: GDS_DATAPLATFORM.Dremio.Secrets.SDX_${{ parameters.environment }}
+      - name: dremioSpace
+        value: live
+    jobs:
+      - template: /pipelines/jobs/run-dbt-deployment.yml@DevOps
+        parameters:
+          azureDevopsEnvironment: ${{ parameters.environment }}_SEMANTIC
+          dremioSpace: $(dremioSpace)
