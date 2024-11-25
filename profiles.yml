@@ -1,0 +1,29 @@
+soforce:
+  outputs:
+    dev:
+      dremio_space: '@user'
+      dremio_space_folder: no_schema
+      legacy_space: legacySpace
+      object_storage_path: no_schema
+      object_storage_source: $scratch
+      password: <<PASSWORD_PLACEHOLDER>>
+      port: 443
+      software_host: semantic-eu.sodexonet.com
+      threads: 1
+      type: dremio
+      use_ssl: true
+      user: <<USER_PLACEHOLDER>>
+    parametrized:
+      dremio_space: "#{ dremioSpace }#"
+      dremio_space_folder: no_schema
+      legacy_space: "#{ legacySpace }#"
+      object_storage_path: no_schema
+      object_storage_source: $scratch
+      user: "#{ DremioUser }#"
+      password: "#{ DremioPassword }#"
+      port: #{ DremioPort }#
+      software_host: "#{ DremioHost }#"
+      threads: 1
+      type: dremio
+      use_ssl: true
+  target: dev
