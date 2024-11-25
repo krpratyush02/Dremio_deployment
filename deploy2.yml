@@ -1,0 +1,96 @@
+name: $(Year:yyyy).$(Month).$(Date:dd)$(Rev:.r)
+
+trigger:
+  branches:
+    include:
+      - main
+      - refs/tags/*
+  paths:
+    include:
+      - /INNOVORDER/projects/*
+parameters:
+- name: project_name
+  default: INNOVORDER
+  values:
+    - INNOVORDER
+    - KAPPTURE
+
+pr: none
+
+variables:
+  - name: projectWorkingDirectory
+    value: $(System.DefaultWorkingDirectory)/INNOVORDER/projects/${{parameters.project_name}}
+  - name: is_main
+    value: "$[eq(variables['Build.SourceBranch'], 'refs/heads/main')]"
+  - name: is_release
+    value: "$[startsWith(variables['Build.SourceBranch'], 'refs/tags/')]"
+
+pool:
+     name: D-A Platform - Semantic Pool
+     demands: 
+     - region -equals eu
+     - environment -equals prd 
+     - subscription -equals sdx
+     
+
+resources:
+  repositories:
+  - repository: DevOps
+    type: git
+    name: IST.GLB.GLB.GDS_DATAPLATFORM/IST.GLB.GLB.GDS_DATAPLATFORM.DEVOPS
+    ref: feature/499678
+
+stages:
+  - stage: Deploy_refine
+    displayName: Refinery deployment
+    variables:
+      - group: GDS_DATAPLATFORM.Dremio.Secrets.SDX_PROD
+      - name: dremioSpace
+        value: refinery
+    condition: |
+      and(
+        succeeded(),
+        or(
+          eq(variables.is_main, 'true'),
+          eq(variables['Build.Reason'], 'Manual')
+        )
+      )
+    jobs:
+      - template: /pipelines/jobs/run-dbt-deployment.yml@DevOps
+        parameters:
+          azureDevopsEnvironment: DEV_SEMANTIC
+          projectWorkingDirectory: $(projectWorkingDirectory)
+
+  - stage: Deploy_preview
+    displayName: Preview deployment
+    variables:
+      - group: GDS_DATAPLATFORM.Dremio.Secrets.SDX_PROD
+      - name: dremioSpace
+        value: preview
+    condition: |
+      and(
+        succeeded(),
+        eq(variables.is_release, 'true')
+      )
+    jobs:
+      - template: /pipelines/jobs/run-dbt-deployment.yml@DevOps
+        parameters:
+          azureDevopsEnvironment: UAT_SEMANTIC
+    dependsOn: []
+
+  - stage: Deploy_live
+    displayName: Live deployment
+    variables:
+      - group: GDS_DATAPLATFORM.Dremio.Secrets.SDX_PROD
+      - name: dremioSpace
+        value: live
+    condition: |
+      and(
+        succeeded(),
+        eq(variables.is_release, 'true')
+      )
+    jobs:
+      - template: /pipelines/jobs/run-dbt-deployment.yml@DevOps
+        parameters:
+          azureDevopsEnvironment: PROD_SEMANTIC
+    dependsOn: [ "Deploy_preview" ]
